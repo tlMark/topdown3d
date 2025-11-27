@@ -521,7 +521,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e4452f5f7c32f2b42ab92c5e8380b1d6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  isLive: 0
+  isLive: 1
   gameTime: 0
   maxGameTime: 20
   health: 0
@@ -537,6 +537,53 @@ MonoBehaviour:
   uiResult: {fileID: 0}
   enemyCleaner: {fileID: 0}
   uiJoystick: {fileID: 0}
+--- !u!1 &1032235685
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1032235686}
+  - component: {fileID: 1032235687}
+  m_Layer: 0
+  m_Name: Spawner
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &1032235686
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1032235685}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1032235687
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1032235685}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37695e21d91c48743b7885d2b720a873, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Spawner
+  spawnPoint: []
+  spawnData: []
+  levelTime: 1
 --- !u!1 &1204679694
 GameObject:
   m_ObjectHideFlags: 0
@@ -990,7 +1037,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7468271822247677014, guid: 5f3fc80fd56bbde4a840fb36d00caf0f, type: 3}
       propertyPath: speed
-      value: 5
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 7468271822247677014, guid: 5f3fc80fd56bbde4a840fb36d00caf0f, type: 3}
       propertyPath: health
@@ -1214,7 +1261,8 @@ SceneRoots:
   - {fileID: 975469679}
   - {fileID: 968284973}
   - {fileID: 1208307490}
-  - {fileID: 832575519}
+  - {fileID: 1032235686}
   - {fileID: 1479607141}
   - {fileID: 1541748291}
   - {fileID: 1929089317}
+  - {fileID: 832575519}

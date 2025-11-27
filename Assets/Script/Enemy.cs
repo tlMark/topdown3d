@@ -6,9 +6,11 @@ public class Enemy : MonoBehaviour
     public float speed;
     public float health;
     public float maxHealth;
+    
     public RuntimeAnimatorController[] animCon;
     public Transform target;
 
+    public float rotationSpeed = 5f; // 회전 속도 변수 추가
     bool isLive;
 
     Rigidbody rigid;
@@ -33,7 +35,7 @@ public class Enemy : MonoBehaviour
             return;
         }
 
-        if (!isLive || anim.GetCurrentAnimatorStateInfo(0).IsName("Hit"))
+        if (!isLive || (anim != null && anim.GetCurrentAnimatorStateInfo(0).IsName("Hit")))
         {
             return;
         }
@@ -42,6 +44,13 @@ public class Enemy : MonoBehaviour
         Vector3 nextVec = new Vector3(dirVec.x, 0, dirVec.z).normalized * speed;
 
         rigid.linearVelocity = nextVec;
+
+        // 회전 로직 추가
+        if (nextVec != Vector3.zero) // 이동 방향이 있을 때만 회전
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(nextVec);
+            rigid.rotation = Quaternion.RotateTowards(rigid.rotation, targetRotation, rotationSpeed);
+        }
     }
 
     void LateUpdate()
@@ -60,18 +69,22 @@ public class Enemy : MonoBehaviour
 
     void OnEnable()
     {
-        target = GameManager.instance.player.transform;
-
         isLive = true;
         coll.enabled = true;
         rigid.isKinematic = false;
-        anim.SetBool("Dead", false);
+        if (anim != null)
+        {
+            anim.SetBool("Dead", false);
+        }
         health = maxHealth;
     }
 
     public void Init(SpawnData data)
     {
-        anim.runtimeAnimatorController = animCon[data.spriteType];
+        if (anim != null)
+        {
+            anim.runtimeAnimatorController = animCon[data.spriteType];
+        }
         speed = data.speed;
         maxHealth = data.health;
         health = data.health;
@@ -80,7 +93,7 @@ public class Enemy : MonoBehaviour
 
     void OnTriggerEnter(Collider collision)
     {
-        if(!collision.CompareTag("Bullet") || !isLive || anim.GetCurrentAnimatorStateInfo(0).IsName("Hit"))
+        if(!collision.CompareTag("Bullet") || !isLive || (anim != null && anim.GetCurrentAnimatorStateInfo(0).IsName("Hit")))
         {
             return;
         }
@@ -93,15 +106,18 @@ public class Enemy : MonoBehaviour
 
         if (health > 0)
         {
-            anim.SetTrigger("Hit");
+            if (anim != null)
+            {
+                anim.SetTrigger("Hit");
+            }
             // AudioManager.instance.PlaySfx(AudioManager.SFX.Hit); // AudioManager가 구현되면 주석 해제
         }
         else
         {
             isLive = false;
             coll.enabled = false;
-            rigid.isKinematic = true;
-            anim.SetBool("Dead", true);
+            rigid.isKinematic = true;            if (anim != null)
+                anim.SetBool("Dead", true);
 
             GameManager.instance.kill++;
             GameManager.instance.GetExp();
