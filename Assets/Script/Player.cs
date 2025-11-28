@@ -8,7 +8,6 @@ public class Player : MonoBehaviour
     private CharacterController characterController;
     private InputSystem_Actions inputActions;
     public Scanner scanner;
-
     private Camera mainCamera;
 
     [SerializeField] private float rotationSpeed = 720f; // degrees per second

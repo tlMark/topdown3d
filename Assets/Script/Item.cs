@@ -55,7 +55,7 @@ public class Item : MonoBehaviour
                 {
                     GameObject newWeapon = new GameObject();
                     weapon = newWeapon.AddComponent<Weapon>();
-                    weapon.Init(itemData);
+                    //weapon.Init(itemData);
                 }
                 else
                 {

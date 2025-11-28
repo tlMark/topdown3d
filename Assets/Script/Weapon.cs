@@ -18,6 +18,11 @@ public class Weapon : MonoBehaviour
         scanner = player.GetComponent<Scanner>();
     }
 
+    void Start()
+    {
+        Init();
+    }
+
     void Update()
     {
         if (!GameManager.instance.isLive)
@@ -28,16 +33,23 @@ public class Weapon : MonoBehaviour
         switch (id)
         {
             case 0:
-                transform.Rotate(Vector3.back * speed * Time.deltaTime);
+                timer += Time.deltaTime;
+
+                    if (timer > speed)
+                    {
+                        timer = 0f;
+                        Fire();
+                    }
+                //원래는 이거! transform.Rotate(Vector3.back * speed * Time.deltaTime);
                 break;
             default:
-                timer += Time.deltaTime;
+                /*timer += Time.deltaTime;
 
                 if (timer > speed)
                 {
                     timer = 0f;
                     Fire();
-                }
+                }*/ //원래는 이거
                 break;
         }
     }
@@ -114,38 +126,47 @@ public class Weapon : MonoBehaviour
         player.BroadcastMessage("ApplyGear", SendMessageOptions.DontRequireReceiver);   //무언가 새로운 장비를 장착했을 때, 자식 오브젝트에 해당 함수 작동케 함
     }
 
-    public void Init(ItemData data)
+    public void Init()//원래는 ItemData data에서 정보를 가져오지만 지금은 아니도록 수정
     {
-        //basic set
-        name = "Weapon_" + data.itemID;
-        transform.parent = player.transform;
-        transform.localPosition = Vector3.zero;
-
-        //property set
-        id = data.itemID;
-        damage = data.baseDamage * Character.WeaponDamage;
-        count = data.baseCount + Character.WeaponCount;
-
-        for (int index = 0; index < GameManager.instance.pool.prefabs.Length; index++)
-        {
-            if (data.projectile == GameManager.instance.pool.prefabs[index])
-            {
-                prefabId = index;
-                break;
-            }
-        }
-
         switch (id)
         {
             case 0:
-                speed = 150 * Character.WeaponSpeedRate;
-                Batch();
-                break;
-            //case 1:
-            default:
                 speed = 0.5f * Character.WeaponRate;
                 break;
+            //case 1:
+            default:                
+                break;
         }
+        // //basic set
+        // name = "Weapon_" + data.itemID;
+        // transform.parent = player.transform;
+        // transform.localPosition = Vector3.zero;
+        //
+        // //property set
+        // id = data.itemID;
+        // damage = data.baseDamage * Character.WeaponDamage;
+        // count = data.baseCount + Character.WeaponCount;
+        //
+        // for (int index = 0; index < GameManager.instance.pool.prefabs.Length; index++)
+        // {
+        //     if (data.projectile == GameManager.instance.pool.prefabs[index])
+        //     {
+        //         prefabId = index;
+        //         break;
+        //     }
+        // }
+        //
+        // switch (id)
+        // {
+        //     case 0:
+        //         speed = 0.5f * Character.WeaponRate;
+        //         /*speed = 150 * Character.WeaponSpeedRate;*/
+        //         /*Batch();*/
+        //         break;
+        //     //case 1:
+        //     default:                
+        //         break;
+        // }
 
         player.BroadcastMessage("ApplyGear", SendMessageOptions.DontRequireReceiver);
     }

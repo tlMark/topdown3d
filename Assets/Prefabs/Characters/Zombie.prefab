@@ -143,6 +143,7 @@ MonoBehaviour:
   maxHealth: 0
   animCon: []
   target: {fileID: 0}
+  rotationSpeed: 5
 --- !u!136 &8812076608040694868
 CapsuleCollider:
   m_ObjectHideFlags: 0
