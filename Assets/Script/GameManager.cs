@@ -28,6 +28,7 @@ public class GameManager : MonoBehaviour
     public GameResult uiResult;
     public GameObject enemyCleaner;
     public Transform uiJoystick;
+    public GameObject shelterObject;
 
     void Awake()
     {
@@ -43,10 +44,14 @@ public class GameManager : MonoBehaviour
 
         gameTime += Time.deltaTime;
 
-        if (gameTime > maxGameTime)
+        if (gameTime >= maxGameTime)
         {
             gameTime = maxGameTime;
-            GameClear();
+            if (shelterObject != null && !shelterObject.activeSelf)
+            {
+                shelterObject.SetActive(true);
+                Debug.Log("쉘터 문이 열렸습니다! 탈출하세요!");
+            }
         }
     }
 

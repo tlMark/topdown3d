@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem; // 1. 새로운 Input System 네임스페이스 추가
 
 public class Weapon : MonoBehaviour
 {
@@ -12,10 +11,10 @@ public class Weapon : MonoBehaviour
 
     Player player;
     //Scanner scanner;
-    public GameObject flashlightObject; 
-    private Scanner scannerComponent; 
-    // 2. 새로운 Input System을 위한 InputAction 변수 추가
-    public InputAction flashlightAction;
+    // Scanner, Flashlight 관련 변수 모두 제거
+    // public GameObject flashlightObject;
+    // private Scanner scannerComponent;
+    // public InputAction flashlightAction;
 
     void Awake()
     {
@@ -26,23 +25,24 @@ public class Weapon : MonoBehaviour
     void Start()
     {
         Init();
-
-        if (flashlightObject != null)
-        {
-            scannerComponent = flashlightObject.GetComponent<Scanner>();
-        }
+        // 손전등 관련 초기화 로직 제거
+        // if (flashlightObject != null)
+        // {
+        //     scannerComponent = flashlightObject.GetComponent<Scanner>();
+        // }
     }
 
-    void OnEnable()
+    /*void OnEnable()
     {
-        // 3. 컴포넌트가 활성화될 때 액션을 활성화합니다.
-        flashlightAction?.Enable();
+        // 손전등 액션 활성화 로직 제거
+        // flashlightAction?.Enable();
     }
 
     void OnDisable()
     {
-        flashlightAction?.Disable();
-    }
+        // 손전등 액션 비활성화 로직 제거
+        // flashlightAction?.Disable();
+    }*/
 
     void Update()
     {
@@ -51,20 +51,23 @@ public class Weapon : MonoBehaviour
             return;
         }
 
-        // 4. GetKeyDown 대신 InputAction의 WasPressedThisFrame() 사용
-        if (flashlightAction != null && flashlightAction.WasPressedThisFrame() && flashlightObject != null)
-        {
-            bool isActive = flashlightObject.activeSelf;
-            flashlightObject.SetActive(!isActive); // 상태 반전
-        }
+        // 손전등 토글 로직 제거
+        // if (flashlightAction != null && flashlightAction.WasPressedThisFrame() && flashlightObject != null)
+        // {
+        //     flashlightObject.SetActive(!flashlightObject.activeSelf);
+        //     if (scannerComponent != null)
+        //     {
+        //         scannerComponent.enabled = flashlightObject.activeSelf;
+        //     }
+        // }
 
         switch (id)
         {
             case 0:
                 timer += Time.deltaTime;
                 // 손전등이 켜져 있고, 스캐너가 대상을 찾았을 때만 발사합니다.
-                if (flashlightObject != null && flashlightObject.activeSelf &&
-                    scannerComponent != null && scannerComponent.nearestTarget != null)
+                if (player.flashlightObject != null && player.flashlightObject.activeSelf &&
+                    player.scanner != null && player.scanner.nearestTarget != null)
                 {
                     if (timer > speed) {
                         timer = 0f;
@@ -121,7 +124,6 @@ public class Weapon : MonoBehaviour
         Vector3 dir = transform.forward; // 기본: 무기가 바라보는 앞쪽 (마우스 조준 방향)
         Vector3 firePos = transform.position; // 기본 위치
 
-
         // 1. 가장 가까운 적이 없으면 발사하지 않음, 원래는 이거
         /*if (nearestTarget == null)
         {
@@ -129,13 +131,13 @@ public class Weapon : MonoBehaviour
         }*/
 
         // 손전등이 할당되어 있다면 발사 위치를 손전등(총구) 위치로 변경
-        if (flashlightObject != null)
+        if (player.flashlightObject != null)
         {
-            firePos = flashlightObject.transform.position;
+            firePos = player.flashlightObject.transform.position;
             // 손전등이 켜져있고 + 적을 찾았다면 -> 자동 조준 발동!
-            if (flashlightObject.activeSelf && scannerComponent != null && scannerComponent.nearestTarget != null)
+            if (player.flashlightObject.activeSelf && player.scanner != null && player.scanner.nearestTarget != null)
             {
-                Vector3 targetPos = scannerComponent.nearestTarget.position;
+                Vector3 targetPos = player.scanner.nearestTarget.position;
                 dir = targetPos - firePos; // 적을 향한 방향 계산
                 dir.y = 0; // 높이 오차 무시
                 dir.Normalize(); // 정규화

@@ -7,6 +7,10 @@ TagManager:
   - Enemy
   - Bullet
   - Area
+  - Zombie
+  - PlayerCanvas
+  - InventoryText
+  - Ground
   layers:
   - Default
   - TransparentFX
@@ -16,7 +20,7 @@ TagManager:
   - UI
   - Ground
   - Enemy
-  - 
+  - Interactable
   - 
   - 
   - 
