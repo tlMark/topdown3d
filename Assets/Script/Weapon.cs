@@ -5,173 +5,68 @@ public class Weapon : MonoBehaviour
     public int id;
     public int prefabId;
     public float damage;
-    public int count;
-    public float speed;
+    public int count; // 이 값이 Bullet.cs의 per(관통 횟수)로 사용됩니다.
+    public float speed; // 공격 속도 (초당 공격 횟수가 아닌, 다음 발사까지 걸리는 시간. 낮을수록 빠름)
     float timer;
 
     Player player;
-    //Scanner scanner;
-    // Scanner, Flashlight 관련 변수 모두 제거
-    // public GameObject flashlightObject;
-    // private Scanner scannerComponent;
-    // public InputAction flashlightAction;
 
     void Awake()
     {
-        player = GameManager.instance.player;
-        //scanner = player.GetComponent<Scanner>();
+        // GameManager를 통해 Player 인스턴스 참조
+        if (GameManager.instance != null && GameManager.instance.player != null)
+        {
+            player = GameManager.instance.player;
+        }
+        else
+        {
+            Debug.LogError("GameManager 또는 Player 인스턴스가 초기화되지 않았습니다.");
+            enabled = false; // 컴포넌트 비활성화
+        }
     }
 
     void Start()
     {
         Init();
-        // 손전등 관련 초기화 로직 제거
-        // if (flashlightObject != null)
-        // {
-        //     scannerComponent = flashlightObject.GetComponent<Scanner>();
-        // }
     }
-
-    /*void OnEnable()
-    {
-        // 손전등 액션 활성화 로직 제거
-        // flashlightAction?.Enable();
-    }
-
-    void OnDisable()
-    {
-        // 손전등 액션 비활성화 로직 제거
-        // flashlightAction?.Disable();
-    }*/
 
     void Update()
     {
-        if (!GameManager.instance.isLive)
+        if (player == null || !GameManager.instance.isLive)
         {
             return;
         }
 
-        // 손전등 토글 로직 제거
-        // if (flashlightAction != null && flashlightAction.WasPressedThisFrame() && flashlightObject != null)
-        // {
-        //     flashlightObject.SetActive(!flashlightObject.activeSelf);
-        //     if (scannerComponent != null)
-        //     {
-        //         scannerComponent.enabled = flashlightObject.activeSelf;
-        //     }
-        // }
+        // [핵심 로직] 공격 타이머 증가
+        timer += Time.deltaTime;
+
+        // 공격 속도(speed)에 따라 총알 발사
+        if (timer > speed)
+        {
+            timer = 0f;
+            Fire();
+        }
+    }
+
+    public void Init()//원래는 ItemData data에서 정보를 가져오지만 지금은 아니도록 수정
+    {
+        // 임시 기본 스탯 설정 (ItemData가 없으므로)
+        // 실제 게임에서는 ItemData를 통해 이 값들을 설정해야 합니다.
+        id = 0; // 예시 ID
+        damage = 10f; // 기본 데미지
+        count = 1; // 관통력 (per) - 기본 1
+        prefabId = 0; // PoolManager의 Bullet 프리팹 ID를 가정
 
         switch (id)
         {
-            case 0:
-                timer += Time.deltaTime;
-                // 손전등이 켜져 있고, 스캐너가 대상을 찾았을 때만 발사합니다.
-                if (player.flashlightObject != null && player.flashlightObject.activeSelf &&
-                    player.scanner != null && player.scanner.nearestTarget != null)
-                {
-                    if (timer > speed) {
-                        timer = 0f;
-                        Fire();
-                    }
-                }
-                //transform.Rotate(Vector3.back * speed * Time.deltaTime);
+            case 0: // 기본 무기
+                speed = 0.5f; // 0.5초당 1발 발사
+                // speed = 0.5f * Character.WeaponRate; // Character 스탯이 있다면 사용
                 break;
-            default:
-                /* 원거리 무기 로직
-                timer += Time.deltaTime;
-
-                if (timer > speed)
-                {
-                    timer = 0f;
-                    Fire();
-                }*/ //원래는 이거
+            default:                
+                speed = 1f;
                 break;
         }
-    }
-
-    void Batch()
-    {
-        for (int index = 0; index < count; index++)
-        {
-            Transform bullet;
-
-            if (index < transform.childCount)
-            {
-                bullet = transform.GetChild(index);
-            }
-            else
-            {
-                bullet = GameManager.instance.pool.Get(prefabId).transform;
-                bullet.parent = transform;
-            }
-
-            bullet.localPosition = Vector3.zero;
-            bullet.localRotation = Quaternion.identity;
-
-            Vector3 rotVec = Vector3.forward * 360 * index / count;
-            bullet.Rotate(rotVec);
-            bullet.Translate(bullet.up * 1.5f, Space.World);
-
-            bullet.GetComponent<Bullet>().Init(damage, -100, Vector3.zero);
-        }
-    }
-
-    void Fire()
-    {
-        // Scanner 기반 3D 발사 로직
-        //Transform nearestTarget = scanner.nearestTarget;
-        // [변경점 4] 조준 방향 및 발사 위치 결정 로직
-        Vector3 dir = transform.forward; // 기본: 무기가 바라보는 앞쪽 (마우스 조준 방향)
-        Vector3 firePos = transform.position; // 기본 위치
-
-        // 1. 가장 가까운 적이 없으면 발사하지 않음, 원래는 이거
-        /*if (nearestTarget == null)
-        {
-            return;
-        }*/
-
-        // 손전등이 할당되어 있다면 발사 위치를 손전등(총구) 위치로 변경
-        if (player.flashlightObject != null)
-        {
-            firePos = player.flashlightObject.transform.position;
-            // 손전등이 켜져있고 + 적을 찾았다면 -> 자동 조준 발동!
-            if (player.flashlightObject.activeSelf && player.scanner != null && player.scanner.nearestTarget != null)
-            {
-                Vector3 targetPos = player.scanner.nearestTarget.position;
-                dir = targetPos - firePos; // 적을 향한 방향 계산
-                dir.y = 0; // 높이 오차 무시
-                dir.Normalize(); // 정규화
-            }
-        }
-        // 총알 생성
-        Transform bullet = GameManager.instance.pool.Get(prefabId).transform;
-        
-        // 위치 및 회전 설정
-        bullet.position = firePos; 
-        bullet.rotation = Quaternion.LookRotation(dir); // 총알이 날아가는 방향을 보게 함
-        
-        // 발사!
-        bullet.GetComponent<Bullet>().Init(damage, count, dir);
-        /*
-        // 2. 발사 방향 계산 (플레이어 위치 -> 타겟 위치)
-        Vector3 targetPos = nearestTarget.position;
-        Vector3 dir = targetPos - transform.position;
-        
-        // 3D 탑다운이므로 Y축 이동은 0으로 고정 (총알이 지면과 평행하게 날아감)
-        dir.y = 0; 
-        
-        // 3. 총알 생성 및 발사 (count만큼 반복)
-        for (int i = 0; i < count; i++)
-        {
-            GameObject bullet = GameManager.instance.pool.Get(prefabId);
-            bullet.transform.position = transform.position;
-            
-            // 4. 총알 방향/회전 설정 및 Init 호출
-            bullet.transform.rotation = Quaternion.LookRotation(dir); // 발사 방향으로 총알을 회전
-            
-            // Init(데미지, 관통횟수, 발사방향) 호출
-            bullet.GetComponent<Bullet>().Init(damage, count, dir.normalized);
-        }*/
     }
     
     public void LevelUp(float damage, int count)
@@ -179,57 +74,36 @@ public class Weapon : MonoBehaviour
         this.damage = damage;
         this.count += count;
 
-        if (id == 0)
-        {
-            Batch();
-        }
-        
-        player.BroadcastMessage("ApplyGear", SendMessageOptions.DontRequireReceiver);   //무언가 새로운 장비를 장착했을 때, 자식 오브젝트에 해당 함수 작동케 함
+        // 레벨업 시 다른 로직이 필요하다면 여기에 추가
+        // 예: 발사 속도 변경, 총알 프리팹 변경 등
     }
 
-    public void Init()//원래는 ItemData data에서 정보를 가져오지만 지금은 아니도록 수정
+    // 무기 발사 로직
+    void Fire()
     {
-        switch (id)
-        {
-            case 0:
-                speed = 0.5f * Character.WeaponRate;
-                //transform.Rotate(Vector3.back * speed * Time.deltaTime);
-                break;
-            //case 1:
-            default:                
-                break;
-        }
-        // //basic set
-        // name = "Weapon_" + data.itemID;
-        // transform.parent = player.transform;
-        // transform.localPosition = Vector3.zero;
-        //
-        // //property set
-        // id = data.itemID;
-        // damage = data.baseDamage * Character.WeaponDamage;
-        // count = data.baseCount + Character.WeaponCount;
-        //
-        // for (int index = 0; index < GameManager.instance.pool.prefabs.Length; index++)
-        // {
-        //     if (data.projectile == GameManager.instance.pool.prefabs[index])
-        //     {
-        //         prefabId = index;
-        //         break;
-        //     }
-        // }
-        //
-        // switch (id)
-        // {
-        //     case 0:
-        //         speed = 0.5f * Character.WeaponRate;
-        //         /*speed = 150 * Character.WeaponSpeedRate;*/
-        //         /*Batch();*/
-        //         break;
-        //     //case 1:
-        //     default:                
-        //         break;
-        // }
+        // 1. 풀에서 총알 오브젝트 가져오기
+        GameObject bulletObject = GameManager.instance.pool.Get(prefabId);
+        if (bulletObject == null) return;
+        
+        bulletObject.transform.position = transform.position;
 
-        //player.BroadcastMessage("ApplyGear", SendMessageOptions.DontRequireReceiver);
-    }
+        // 2. 총알의 방향 설정
+        // Scanner를 사용하지 않으므로, Player의 마지막 이동 방향을 사용합니다.
+        //Vector3 dir = player.inputVec;
+        
+        /*// 이동 방향이 없으면 (정지 상태), Vector3.up (위쪽)을 기본 방향으로 설정합니다.
+        if (dir == Vector3.zero)
+        {
+            dir = Vector3.up; 
+        }
+
+        // 3. Bullet 컴포넌트 가져오기
+        Bullet bullet = bulletObject.GetComponent<Bullet>();
+
+        // 4. Bullet의 Init 함수 호출 (damage, per(count), dir)
+        // Bullet.cs의 Init 시그니처: public void Init(float damage, int per, Vector3 dir)
+        bullet.Init(damage, count, dir.normalized); // <--- Bullet의 시그니처에 맞게 count 값 전달
+    */}
+    
+    // 기존 주석 처리된 Init() 부분은 위에 재작성된 Init()으로 대체합니다.
 }

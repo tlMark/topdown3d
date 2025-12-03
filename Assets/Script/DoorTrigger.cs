@@ -32,31 +32,33 @@ public class DoorTrigger : MonoBehaviour
         }
     }
     
-    private void OnDestroy()
-    {
-        // 메모리 누수 방지: 오브젝트가 파괴될 때 이벤트 리스너도 제거합니다.
-        if (DialogueManager.instance != null)
-        {
-            DialogueManager.instance.onDialogueEnd.RemoveListener(OpenDoorAndActivateAI);
-        }
-    }
-
-
+    // 플레이어가 트리거 영역에 진입했을 때
     private void OnTriggerEnter(Collider other)
     {
-        // 이미 작동했거나, 플레이어가 아니면 무시
-        if (isTriggered || !other.CompareTag("Player")) return;
+        // 이미 트리거되었거나 충돌한 오브젝트가 플레이어가 아니면 리턴
+        if (isTriggered || !other.CompareTag("Player"))
+        {
+            return;
+        }
 
+        // 1. 딱 한 번만 실행되도록 플래그 설정
         isTriggered = true;
-        Debug.Log("DoorTrigger: 플레이어 진입. DialogueManager.StartDialogue() 호출.");
-        
-        // 1. 대화 시작
-        if (DialogueManager.instance != null && initialDialogue.dialogues.Length > 0)
+
+        // 2. 대화 시작
+        StartDialogueSequence();
+    }
+    
+    // 대화 시퀀스 시작
+    private void StartDialogueSequence()
+    {
+        // 대화 데이터가 유효하고 DialogueManager가 준비되었는지 확인
+        if (DialogueManager.instance != null && initialDialogue.dialogues != null && initialDialogue.dialogues.Length > 0)
         {
             DialogueManager.instance.StartDialogue(initialDialogue);
         }
         else
         {
+            // 대화가 없거나 오류가 있으면, 대화 없이 바로 문을 엽니다.
             Debug.LogError("DoorTrigger: 대화 데이터가 없거나 DialogueManager가 없습니다. 바로 문을 엽니다.");
             OpenDoorAndActivateAI();
         }
@@ -90,13 +92,26 @@ public class DoorTrigger : MonoBehaviour
             SurvivorAI survivorAI = survivorObject.GetComponent<SurvivorAI>();
             if (survivorAI != null)
             {
-                // SurvivorAI의 StartFollowing 함수 호출 (10단계 목표 달성)
-                survivorAI.StartFollowing(); 
+                survivorAI.StartFollowing(); // Coward 상태를 해제하고 FollowPlayer로 전환하는 함수
             }
             else
             {
-                Debug.LogError("DoorTrigger: Survivor Object에 SurvivorAI 컴포넌트가 없습니다! 추적 시작 실패.");
+                Debug.LogError("DoorTrigger: Survivor 오브젝트에 SurvivorAI 컴포넌트가 없습니다!");
             }
+        }
+        
+        // 문이 열리고 생존자가 구출되었으므로, 트리거 자체는 제거할 필요가 있습니다.
+        // 이 스크립트가 부착된 오브젝트를 비활성화합니다.
+        gameObject.SetActive(false); 
+    }
+    
+    // 씬이 파괴될 때 이벤트 리스너를 제거하여 메모리 누수를 방지합니다.
+    private void OnDestroy()
+    {
+        if (DialogueManager.instance != null)
+        {
+            DialogueManager.instance.onDialogueEnd.RemoveListener(OpenDoorAndActivateAI);
+            Debug.Log("DoorTrigger: onDialogueEnd 이벤트 리스너 제거 완료.");
         }
     }
 }

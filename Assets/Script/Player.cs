@@ -1,163 +1,164 @@
-using System.Collections;
 using UnityEngine;
-using UnityEngine.InputSystem;
+using UnityEngine.InputSystem; // PlayerInput 컴포넌트를 사용하기 위해 필요
 
-[RequireComponent(typeof(CharacterController))]
+/// <summary>
+/// 플레이어의 최상위 컨트롤러이자 상태 관리 및 컴포넌트 연결 허브입니다.
+/// </summary>
+[RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(PlayerInputController))]
+[RequireComponent(typeof(PlayerMovement))]
+[RequireComponent(typeof(PlayerInput))] // Input System 사용을 위해 추가
 public class Player : MonoBehaviour
 {
-    public float speed = 5.0f;
-    private CharacterController characterController;
-    private InputSystem_Actions inputActions;
-    public Scanner scanner;
-    private Camera mainCamera;
+    // 연결된 컴포넌트
+    private PlayerInputController inputController;
+    private PlayerMovement movement;
     
-    [SerializeField] private float rotationSpeed = 720f; // degrees per second
-    [SerializeField] private LayerMask groundLayer;
+    // [기존 기능 복원] 손전등 연결
+    [Header("--- Functional Components ---")]
+    [Tooltip("손전등 역할을 하는 Light 컴포넌트를 연결하세요.")]
+    public Light flashlight; 
+    
+    // [회전 기능 복원] 마우스 회전을 위한 변수
+    [Header("--- Rotation Settings ---")]
+    [Tooltip("플레이어 회전을 위한 바닥 레이어 (Terrain, Floor 등)")]
+    public LayerMask groundLayer; 
+    
+    // 상호작용 관련 변수
+    private Collider[] interactionOverlap = new Collider[5]; 
+    private int interactionLayerMask; 
 
-    // ======================================================
-    // 통합된 기능 변수
-    // ======================================================
-    [Header("# Interaction")] // 새로운 섹션 추가
-    public GameObject flashlightObject;      // Inspector에서 손전등 오브젝트를 연결해주세요.
-    private Scanner scannerComponent;         // 손전등 오브젝트에 부착된 Scanner 컴포넌트 (감지 범위 제어용)
-    public InputAction interactionAction;     // Inspector에서 상호작용/손전등 액션을 연결해주세요.
-    [SerializeField] private float interactionRange = 1.5f; // 상호작용 감지 범위
-    [SerializeField] private LayerMask interactableLayer; // 상호작용 오브젝트 레이어 (에디터에서 설정)
-    public IInteractable nearestInteractable; // 현재 가장 가까운 상호작용 가능한 오브젝트
-
-    private void Awake()
+    void Awake()
     {
-        characterController = GetComponent<CharacterController>();
-        mainCamera = Camera.main;
-        scanner = GetComponent<Scanner>();
-        inputActions = new InputSystem_Actions();
-
-        // 손전등 오브젝트에 Scanner 컴포넌트가 있다면 초기화합니다.
-        if (flashlightObject != null)
+        // 컴포넌트 참조
+        inputController = GetComponent<PlayerInputController>();
+        movement = GetComponent<PlayerMovement>();
+        
+        // 상호작용 레이어 마스크 설정 
+        interactionLayerMask = LayerMask.GetMask("Interactable"); 
+        
+        // 손전등 초기 상태 설정 (시작 시 꺼짐)
+        if (flashlight != null)
         {
-            scannerComponent = flashlightObject.GetComponent<Scanner>();
-            if (scannerComponent != null)
-            {
-                // 손전등의 초기 활성화 상태에 따라 스캐너 컴포넌트를 활성화/비활성화합니다.
-                scannerComponent.enabled = flashlightObject.activeSelf;
-            }
+            flashlight.enabled = false;
         }
-
-        // 상호작용 액션에 이벤트 핸들러를 연결합니다.
-        // 이 부분이 '상호작용 입력 처리' 로직을 Input System으로 대체합니다.
-        interactionAction.performed += OnInteractionPerformed;
+        
+        // 마우스 커서를 숨기고 잠급니다 (탑다운 슈터의 일반적인 설정)
+        Cursor.lockState = CursorLockMode.Confined; // 화면을 벗어나지 않게 유지
+        Cursor.visible = true; // 커서 보이게 설정 (조준용)
     }
 
-    private void OnEnable()
+    void Update()
     {
-        inputActions.Player.Enable();
-        interactionAction.Enable(); // 상호작용 액션 활성화
+        // 게임 상태 체크
+        if (GameManager.instance == null || !GameManager.instance.isLive) return;
+
+        // 1. 이동 및 회전 로직 (마우스 커서 방향 회전)
+        HandleMovementAndRotation();
+        
+        // 2. 상호작용 로직
+        if (inputController.isInteractPressed)
+        {
+            HandleInteraction(); 
+            // [수정] 입력을 처리했으므로 명시적으로 소비하여 다음 프레임에 중복 실행 방지
+            inputController.ConsumeInteract();
+        }
+        
+        // 3. 손전등 토글 로직
+        if (inputController.isFlashlightPressed)
+        {
+            ToggleFlashlight();
+            // [수정] 입력을 처리했으므로 명시적으로 소비하여 다음 프레임에 중복 실행 방지
+            inputController.ConsumeFlashlight();
+        }
     }
 
-    private void OnDisable()
+    private void HandleMovementAndRotation()
     {
-        inputActions.Player.Disable();
-        interactionAction.Disable(); // 상호작용 액션 비활성화
+        Vector3 moveInput = inputController.moveInput;
+        
+        // [핵심] 마우스 커서 위치를 향하는 방향 계산
+        Vector3 lookDirection = GetMouseLookDirection();
+
+        // 이동 및 회전 실행
+        movement.MoveAndRotate(moveInput, lookDirection);
+    }
+    
+    /// <summary>
+    /// 마우스 커서 위치를 Raycast하여 플레이어와의 방향 벡터를 반환합니다.
+    /// (마우스 커서 기반 회전 로직)
+    /// </summary>
+    private Vector3 GetMouseLookDirection()
+    {
+        if (Camera.main == null) return Vector3.zero;
+
+        // 마우스 위치에서 카메라를 통해 씬으로 Ray를 발사
+        Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
+        
+        // Raycast를 바닥 레이어(groundLayer)에만 실행
+        if (Physics.Raycast(ray, out RaycastHit hit, 100f, groundLayer))
+        {
+            Vector3 targetPosition = hit.point;
+            Vector3 direction = targetPosition - transform.position;
+            
+            // Y축 회전만 사용하기 위해 Y를 0으로 고정하고 정규화
+            direction.y = 0;
+            return direction.normalized;
+        }
+        
+        return Vector3.zero; 
     }
 
-    // 상호작용 입력 처리 핸들러
-    private void OnInteractionPerformed(InputAction.CallbackContext context)
-    {
-        if (GameManager.instance == null || !GameManager.instance.isLive)
-        {
-            return;
-        }
-
-        // 1. 대화 진행 (최고 우선순위)
-        // DialogueManager가 존재하고 대화창이 활성화되어 있으면 대사 진행
-        if (DialogueManager.instance != null && DialogueManager.instance.dialoguePanel.activeSelf)
-        {
-            DialogueManager.instance.DisplayNextDialogue();
-            return; // 대화 중에는 다른 상호작용을 막습니다.
-        }
-
-        // 2. 오브젝트 상호작용 (대화 중이 아닐 때)
-        if (nearestInteractable != null)
-        {
-            nearestInteractable.Interact(this.gameObject); // 상호작용 요청
-            return; // 상호작용을 했으면 손전등 토글은 하지 않습니다.
-        }
-
-        // 3. 손전등 켜기/끄기 (모든 우선순위가 충족되지 않았을 때)
-        ToggleFlashlight();
-    }
-
-    // 손전등 켜기/끄기 기능
+    /// <summary>
+    /// 손전등을 켜거나 끕니다.
+    /// </summary>
     private void ToggleFlashlight()
     {
-        if (flashlightObject != null)
+        if (flashlight != null)
         {
-            // 손전등 상태 토글
-            bool isActive = !flashlightObject.activeSelf;
-            flashlightObject.SetActive(isActive);
+            flashlight.enabled = !flashlight.enabled;
+            Debug.Log($"손전등 토글: {(flashlight.enabled ? "ON" : "OFF")}");
+        }
+        else
+        {
+            Debug.LogWarning("손전등 Light 컴포넌트가 연결되지 않았습니다! 인스펙터에서 Light 컴포넌트를 연결해주세요.");
+        }
+    }
 
-            // 손전등에 부착된 스캐너 컴포넌트 활성화/비활성화
-            if (scannerComponent != null)
+    /// <summary>
+    /// 상호작용 로직 (HandleInteraction은 Door, Key 등 IInteractable 구현체를 실행합니다.)
+    /// </summary>
+    private void HandleInteraction()
+    {
+        // 플레이어 근처의 상호작용 가능한 오브젝트를 검색
+        int numFound = Physics.OverlapSphereNonAlloc(transform.position, 2.0f, interactionOverlap, interactionLayerMask);
+
+        if (numFound > 0)
+        {
+            IInteractable nearestInteractable = null;
+            float shortestDistance = float.MaxValue;
+
+            for (int i = 0; i < numFound; i++)
             {
-                scannerComponent.enabled = isActive;
+                IInteractable interactable = interactionOverlap[i].GetComponent<IInteractable>();
+                
+                if (interactable != null)
+                {
+                    float distance = Vector3.Distance(transform.position, interactionOverlap[i].transform.position);
+                    
+                    if (distance < shortestDistance)
+                    {
+                        shortestDistance = distance;
+                        nearestInteractable = interactable;
+                    }
+                }
             }
-        }
-    }
-
-    private void Update()
-    {
-        if (GameManager.instance == null || !GameManager.instance.isLive) return;
-        HandleMovement();
-        HandleRotation();
-        DetectInteractable(); // 매 프레임 상호작용 오브젝트 감지
-    }
-
-    private void HandleMovement()
-    {
-        Vector2 input = inputActions.Player.Move.ReadValue<Vector2>();
-        Vector3 moveDirection = new Vector3(input.x, 0, input.y);
-
-        if (moveDirection.sqrMagnitude > 0.01f)
-        {
-            Vector3 normalizedMoveDirection = moveDirection.normalized;
-            characterController.Move(normalizedMoveDirection * speed * Time.deltaTime);
-        }
-    }
-
-    private void HandleRotation()
-    {
-        Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-        if (Physics.Raycast(ray, out RaycastHit hit, float.MaxValue, groundLayer))
-        {
-            Vector3 lookDirection = hit.point - transform.position;
-            lookDirection.y = 0; // 캐릭터가 위아래로 기울지 않도록 y축을 고정합니다.
-            Quaternion targetRotation = Quaternion.LookRotation(lookDirection);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
-        }
-    }
-
-    // 1. 상호작용 가능한 오브젝트 감지
-    private void DetectInteractable()
-    {
-        // 플레이어 주변 범위 내의 Collider를 모두 탐색
-        Collider[] hitColliders = Physics.OverlapSphere(
-            transform.position,
-            interactionRange,
-            interactableLayer
-        );
-
-        nearestInteractable = null;
-
-        // 감지된 오브젝트 중 IInteractable 인터페이스를 가진 오브젝트를 찾습니다.
-        foreach (var hitCollider in hitColliders)
-        {
-            IInteractable interactable = hitCollider.GetComponent<IInteractable>();
-            if (interactable != null)
+            
+            // 상호작용 실행
+            if (nearestInteractable != null)
             {
-                // [단순화] 가장 먼저 찾은 오브젝트를 가장 가까운 것으로 간주합니다.
-                // (필요 시 거리를 계산하여 가장 가까운 것을 선택하도록 개선 가능)
-                nearestInteractable = interactable;
-                break;
+                nearestInteractable.Interact(gameObject); 
+                Debug.Log($"상호작용 실행: {((MonoBehaviour)nearestInteractable).gameObject.name}");
             }
         }
     }
