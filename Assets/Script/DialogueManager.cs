@@ -2,10 +2,15 @@
 using UnityEngine;
 using TMPro; // TMP_Text를 사용한다면 추가
 using System.Collections;
+using UnityEngine.Events; 
 
 public class DialogueManager : MonoBehaviour
 {
     public static DialogueManager instance;
+
+    [Header("--- Scenario Flow ---")]
+    [Tooltip("대화 시퀀스가 완전히 종료된 후 호출됩니다. DoorTrigger.OpenDoorAndActivateAI() 등을 여기에 연결하세요.")]
+    public UnityEvent onDialogueEnd;
 
     // UI 연결 변수
     public GameObject dialoguePanel; // 대화창 UI 전체 패널
@@ -83,5 +88,6 @@ public class DialogueManager : MonoBehaviour
         dialoguePanel.SetActive(false);
         // [중요] 시나리오 흐름 제어를 위해 TutorialManager에 이벤트나 신호를 보낼 수 있습니다.
         // 예: TutorialManager.instance.NextStep(); 
+        onDialogueEnd?.Invoke();
     }
 }
